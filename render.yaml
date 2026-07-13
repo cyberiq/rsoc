@@ -1,0 +1,79 @@
+services:
+  - type: web
+    name: kreen-app
+    env: docker
+    region: frankfurt
+    plan: free
+    
+    envVars:
+      - key: APP_URL
+        value: https://kreen-app.onrender.com
+      - key: DB_PATH
+        value: /var/www/html/kreen.db
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_TIMEZONE
+        value: Asia/Baghdad
+      - key: SESSION_TIMEOUT
+        value: "1800"
+      - key: ENABLE_TELEGRAM
+        value: "true"
+      - key: PROXY_ENABLED
+        value: "true"
+      - key: UPSTREAM_URL
+        value: http://127.0.0.1:8080
+      
+      # SMTP Configuration
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: tls
+      - key: SMTP_FROM_NAME
+        value: تطبيق كرين
+      
+      # Telegram (Add these in Render dashboard)
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+    
+    healthCheckPath: /
+    healthCheckInterval: 30
+    
+    docker:
+      dockerfile: Dockerfile
+      dockerCompose:
+        version: "3"
+        services:
+          web:
+            image: ${RENDER_EXTERNAL_IMAGE_URL}
+            ports:
+              - "80:80"
+            environment:
+              - APP_URL=https://kreen-app.onrender.com
+              - DB_PATH=/var/www/html/kreen.db
+              - ENABLE_TELEGRAM=${TELEGRAM_TOKEN:+true}
+              - UPSTREAM_URL=http://127.0.0.1:8080
+            volumes:
+              - ./kreen.db:/var/www/html/kreen.db
+              - ./uploads:/var/www/html/uploads
+              - ./logs:/var/log
+
+  - type: static
+    name: kreen-docs
+    sourceDir: ./soc_manger
+    buildCommand: "echo 'Static site'"
+    staticPublishPath: ./
+    routes:
+      - path: /docs
+        destination: /README.md

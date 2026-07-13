@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # جدار الحماية WAF
+  waf:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: soc-waf
+    expose:
+      - "5000"
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - ENABLE_TELEGRAM=${ENABLE_TELEGRAM:-True}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set}
+      - ADMIN_ALLOWED_IPS=${ADMIN_ALLOWED_IPS:-127.0.0.1,::1}
+      - PROXY_ENABLED=${PROXY_ENABLED:-True}
+      - UPSTREAM_URL=${UPSTREAM_URL:-http://your-app:8000}
+      - FLASK_ENV=production
+    volumes:
+      - ./logs:/app/logs
+      - ./waf_security.log:/app/waf_security.log
+    restart: unless-stopped
+    networks:
+      - waf_network
+    labels:
+      - "com.example.description=SOC WAF v3.0"
+
+  # Nginx (Reverse Proxy)
+  nginx:
+    image: nginx:latest
+    container_name: waf-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - waf
+    restart: unless-stopped
+    networks:
+      - waf_network
+
+  # تطبيقك (مثال)
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: your-app
+    expose:
+      - "8000"
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped
+    networks:
+      - waf_network
+
+networks:
+  waf_network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local

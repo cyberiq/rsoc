@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: soc-waf
+    env: python
+    rootDirectory: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn mine:application --workers 4 --worker-class sync --timeout 30 -b 0.0.0.0:$PORT
+    autoDeploy: false
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: "False"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: TELEGRAM_TOKEN
+        fromDatabase:
+          name: telegram_token
+      - key: TELEGRAM_CHAT_ID
+        fromDatabase:
+          name: telegram_chat_id
+      - key: ADMIN_PASSWORD
+        fromDatabase:
+          name: admin_password
+      - key: UPSTREAM_URL
+        value: https://kreen.onrender.com
+      - key: PROXY_ENABLED
+        value: "True"
+      - key: ENABLE_TELEGRAM
+        value: "True"

@@ -1,0 +1,57 @@
+# بيئة التطوير والإنتاج
+.env
+.env.local
+.env.*.local
+
+# قاعدة البيانات
+*.db
+*.sqlite
+*.sqlite3
+kreen.db
+kreen_rw.db
+db/database.sqlite
+
+# الملفات المرفوعة
+uploads/
+images/
+
+# السجلات
+logs/
+*.log
+waf_security.log
+
+# المكتبات والتبعيات
+vendor/
+node_modules/
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# أدوات التطوير
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# نتائج الاختبار
+.phpunit.result.cache
+test-results/
+
+# ملفات النظام
+Thumbs.db
+.env.backup
+
+# ملفات الجلسات
+sessions/
+tmp/
+temp/
+
+# ملفات الإنشاء
+build/
+dist/
+*.tar.gz
+*.zip
+
