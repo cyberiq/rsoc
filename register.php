@@ -1,13 +1,31 @@
 <?php
 session_start();
 require 'config.php';
-require __DIR__ . '/vendor/autoload.php';
+
+$autoloadPath = __DIR__ . '/vendor/autoload.php';
+if (!file_exists($autoloadPath)) {
+    $autoloadFound = false;
+} else {
+    require $autoloadPath;
+    $autoloadFound = true;
+}
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 $message = '';
 $message_type = '';
+
+$selected_user_type = $_GET['user_type'] ?? 'customer';
+if (!in_array($selected_user_type, ['customer', 'driver', 'kia'], true)) {
+    $selected_user_type = 'customer';
+}
+
+$fullname = '';
+$phone = '';
+$province = '';
+$email = '';
+$user_type = $selected_user_type;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fullname = trim($_POST['fullname'] ?? '');
@@ -25,6 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message_type = 'error';
     } elseif (!in_array($user_type, ['customer', 'driver', 'kia'], true)) {
         $message = '❌ نوع الحساب غير صحيح.';
+        $message_type = 'error';
+    } elseif (!$autoloadFound) {
+        $message = '❌ لم يتم تثبيت الاعتمادات المطلوبة. يرجى تشغيل composer install ثم إعادة محاولة التسجيل.';
         $message_type = 'error';
     } else {
         $table_map = [
@@ -180,15 +201,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="POST">
-            <input type="text" name="fullname" placeholder="الاسم الكامل" required>
-            <input type="text" name="phone" placeholder="رقم الهاتف" required>
-            <input type="text" name="province" placeholder="المحافظة" required>
-            <input type="email" name="email" placeholder="البريد الإلكتروني" required>
+            <input type="text" name="fullname" placeholder="الاسم الكامل" value="<?= htmlspecialchars($fullname) ?>" required>
+            <input type="text" name="phone" placeholder="رقم الهاتف" value="<?= htmlspecialchars($phone) ?>" required>
+            <input type="text" name="province" placeholder="المحافظة" value="<?= htmlspecialchars($province) ?>" required>
+            <input type="email" name="email" placeholder="البريد الإلكتروني" value="<?= htmlspecialchars($email) ?>" required>
             <input type="password" name="password" placeholder="كلمة المرور" required>
             <select name="user_type" required>
-                <option value="customer">مستخدم عادي</option>
-                <option value="driver">سائق كرين</option>
-                <option value="kia">سائق كيا</option>
+                <option value="customer" <?= $user_type === 'customer' ? 'selected' : '' ?>>مستخدم عادي</option>
+                <option value="driver" <?= $user_type === 'driver' ? 'selected' : '' ?>>سائق كرين</option>
+                <option value="kia" <?= $user_type === 'kia' ? 'selected' : '' ?>>سائق كيا</option>
             </select>
             <button type="submit">📝 إنشاء الحساب</button>
         </form>

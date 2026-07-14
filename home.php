@@ -2,7 +2,7 @@
 session_start();
 $user_id = $_SESSION['user_id'] ?? null;
 $user_type = $_SESSION['user_type'] ?? null;
-$fullname = $_SESSION['fullname'] ?? '';
+$fullname = $_SESSION['fullname'] ?? $_SESSION['user_name'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" class="scroll-smooth">

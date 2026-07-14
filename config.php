@@ -5,10 +5,6 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/env-loader.php';
-// ... باقي الكود كما هو دون أي تغيير
-require_once __DIR__ . '/env-loader.php';
-
-// تم إزالة ترويسات header() لتجنب التعارض المسبب للخطأ 500 مع ملفات المشروع الأخرى
 
 date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'Asia/Baghdad');
 define('APP_DEBUG', (getenv('APP_DEBUG') === 'true'));
@@ -56,38 +52,63 @@ function sqliteColumnExists(PDO $pdo, string $table, string $column): bool {
 function ensureKreenSchema(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS customers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        phone TEXT UNIQUE NOT NULL,
-        name TEXT,
-        password TEXT,
-        balance_iqd INTEGER NOT NULL DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        fullname TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        province TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        verification_code TEXT,
+        is_verified INTEGER DEFAULT 0,
+        role TEXT DEFAULT 'customer',
+        profile_image TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        balance_iqd INTEGER NOT NULL DEFAULT 0
     )");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS drivers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        phone TEXT UNIQUE NOT NULL,
-        name TEXT,
-        password TEXT,
-        balance_iqd INTEGER NOT NULL DEFAULT 0,
-        status TEXT DEFAULT 'offline',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        fullname TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        province TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        wheel_number TEXT,
+        wheel_type TEXT,
+        wheel_color TEXT,
+        wheel_model TEXT,
+        verification_code TEXT,
+        is_verified INTEGER DEFAULT 0,
+        profile_image TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        balance_iqd INTEGER NOT NULL DEFAULT 0
     )");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS kias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        driver_id INTEGER UNIQUE,
-        plate_number TEXT,
-        balance_iqd INTEGER NOT NULL DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        fullname TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        province TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        car_number TEXT,
+        car_model TEXT,
+        verification_code TEXT,
+        is_verified INTEGER DEFAULT 0,
+        profile_image TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        balance_iqd INTEGER NOT NULL DEFAULT 0
     )");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS service_requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER,
+        customer_id INTEGER NOT NULL,
         driver_id INTEGER,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
         status TEXT DEFAULT 'pending',
-        charge_applied INTEGER NOT NULL DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        charge_applied INTEGER NOT NULL DEFAULT 0
     )");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS driver_locations (
@@ -148,7 +169,12 @@ define('SMTP_PASS', 'lgpliqnptkhxwzsw');
 define('SMTP_SECURE', 'tls');
 define('SMTP_FROM_EMAIL', SMTP_USER);
 define('SMTP_FROM_NAME', 'تطبيق كرين');
-define('APP_URL', getenv('APP_URL') ?: 'http://localhost/kreen');
+$defaultAppUrl = 'http://localhost/kreen';
+if (isset($_SERVER['HTTP_HOST']) && !empty($_SERVER['HTTP_HOST'])) {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+    $defaultAppUrl = $scheme . $_SERVER['HTTP_HOST'];
+}
+define('APP_URL', getenv('APP_URL') ?: $defaultAppUrl);
 define('SERVICE_FEE_IQD', 5000);
 
 // --- 7. نظام التنبيهات عبر التليجرام ---

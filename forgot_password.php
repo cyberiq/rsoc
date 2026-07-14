@@ -51,6 +51,19 @@ $theme_classes = [
 
 $current_theme = $theme_classes[$user_type];
 
+function findAccountTableByEmail(PDO $pdo, string $email): ?array {
+    $table_map = ['customer' => 'customers', 'driver' => 'drivers', 'kia' => 'kias'];
+    foreach ($table_map as $type => $table) {
+        $stmt = $pdo->prepare("SELECT fullname FROM $table WHERE email = ? LIMIT 1");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user) {
+            return ['type' => $type, 'table' => $table, 'fullname' => $user['fullname']];
+        }
+    }
+    return null;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $selected_user_type = $_POST['user_type'] ?? 'customer';
@@ -62,12 +75,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $table = ($selected_user_type === 'driver') ? 'drivers' : (($selected_user_type === 'kia') ? 'kias' : 'customers');
 
         try {
-            // التحقق من وجود الحساب المسجل بهذا البريد أولاً
-            $stmt = $pdo->prepare("SELECT fullname FROM $table WHERE email = ?");
-            $stmt->execute([$email]);
-            $user = $stmt->fetch();
+           // التحقق من وجود الحساب المسجل بهذا البريد أولاً وفق النوع المحدد
+           $stmt = $pdo->prepare("SELECT fullname FROM $table WHERE email = ?");
+           $stmt->execute([$email]);
+           $user = $stmt->fetch();
 
-            if ($user) {
+           if (!$user) {
+               $found = findAccountTableByEmail($pdo, $email);
+               if ($found) {
+                   $selected_user_type = $found['type'];
+                   $table = $found['table'];
+                   $user = ['fullname' => $found['fullname']];
+               }
+           }
+
+           if ($user) {
                 // توليد توكن آمن وقوي لاستعادة كلمة المرور
                 $token = bin2hex(random_bytes(32));
                 // صلاحية التوكن 1 ساعة من الآن
@@ -85,28 +107,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // يحصل الرابط على نوع المستخدم وتوكن الاستعادة كمحددات
                 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
                 $host = $_SERVER['HTTP_HOST'];
-                $reset_link = $protocol . $host . dirname($_SERVER['PHP_SELF']) . "/reset_password.php?token=" . $token . "&user_type=" . $selected_user_type;
+                $basePath = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+                $relative_reset_path = $basePath . '/reset_password.php?token=' . $token . '&user_type=' . $selected_user_type;
+                $appUrl = getenv('APP_URL') ?: ($protocol . $host);
+                $reset_link = rtrim($appUrl, '/') . $relative_reset_path;
 
                 // التحقق من توفر مكتبة PHPMailer وإرسال الرسالة البريدية الفخمة
                 if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
-                    $mail = new PHPMailer(true);
-                    
-                    $mail->isSMTP();
-                    $mail->Host       = SMTP_HOST;
-                    $mail->SMTPAuth   = true;
-                    $mail->Username   = SMTP_USER;
-                    $mail->Password   = SMTP_PASS;
-                    $mail->SMTPSecure = SMTP_SECURE;
-                    $mail->Port       = SMTP_PORT;
-                    $mail->CharSet    = 'UTF-8';
-
-                    $mail->setFrom(SMTP_USER, 'نظام تطبيق كرين');
-                    $mail->addAddress($email, $user['fullname']);
-                    $mail->isHTML(true);
-                    $mail->Subject = 'رابط إعادة تعيين كلمة المرور - تطبيق كرين';
-                    
-                    // تصميم راقٍ وسينمائي لبريد التفعيل المستلم في بريد الجيميل
-                    $mail->Body = "
+                    try {
+                        $mail = new PHPMailer(true);
+                         
+                        $mail->isSMTP();
+                        $mail->Host       = SMTP_HOST;
+                        $mail->SMTPAuth   = true;
+                        $mail->Username   = SMTP_USER;
+                        $mail->Password   = SMTP_PASS;
+                        $mail->SMTPSecure = SMTP_SECURE;
+                        $mail->Port       = SMTP_PORT;
+                        $mail->CharSet    = 'UTF-8';
+ 
+                        $mail->setFrom(SMTP_USER, 'نظام تطبيق كرين');
+                        $mail->addAddress($email, $user['fullname']);
+                        $mail->isHTML(true);
+                        $mail->Subject = 'رابط إعادة تعيين كلمة المرور - تطبيق كرين';
+                         
+                        // تصميم راقٍ وسينمائي لبريد التفعيل المستلم في بريد الجيميل
+                        $mail->Body = "
                     <div dir='rtl' style='font-family: Tahoma, Arial, sans-serif; max-width: 600px; margin: auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #f8fafc;'>
                         <div style='text-align: center; margin-bottom: 25px;'>
                             <h2 style='color: #d97706; margin: 0;'>تطبيق كرين سحب وإنقاذ</h2>
@@ -125,12 +151,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p style='font-size: 11px; color: #94a3b8; text-align: center;'>إذا لم تقم بطلب إعادة التعيين بنفسك، يرجى تجاهل هذا البريد الإلكتروني وسيبقى حسابك آمناً تماماً.</p>
                     </div>";
 
-                    $mail->send();
-                    $message = "🎉 تم إرسال رابط استعادة كلمة المرور بنجاح إلى بريدك الإلكتروني. يرجى مراجعة صندوق الوارد (أو البريد المزعج).";
-                    $message_type = "success";
+                        $mail->send();
+                        $message = "🎉 تم إرسال رابط استعادة كلمة المرور بنجاح إلى بريدك الإلكتروني. يرجى مراجعة صندوق الوارد (أو البريد المزعج).";
+                        $message_type = "success";
+                    } catch (Exception $e) {
+                        $message = "⚠️ تم إنشاء رابط الاستعادة بنجاح، لكن حدثت مشكلة في إرسال البريد الإلكتروني: " . $e->getMessage();
+                        $message_type = "warning";
+                        $debug_reset_link = $relative_reset_path;
+                    }
                 } else {
-                    $message = "❌ خطأ في النظام: مكتبة PHPMailer غير مهيأة بالشكل الصحيح في الخادم لإرسال البريد.";
-                    $message_type = "error";
+                    $message = "⚠️ تم إنشاء رابط الاستعادة بنجاح، ولكن مكتبة PHPMailer غير موجودة في الخادم لإرسال البريد.";
+                    $message_type = "warning";
+                    $debug_reset_link = $relative_reset_path;
+                }
+ 
+                $hostOnly = explode(':', $_SERVER['HTTP_HOST'] ?? '')[0];
+                if (defined('APP_DEBUG') && APP_DEBUG === true) {
+                    error_log("Reset password link (DEBUG only): $relative_reset_path");
                 }
 
             } else {
@@ -175,7 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <!-- عرض إشعارات النجاح أو الفشل -->
     <?php if ($message): ?>
-      <div class="mb-5 p-4 rounded-xl text-sm font-medium border leading-relaxed <?= ($message_type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200') ?>">
+      <div class="mb-5 p-4 rounded-xl text-sm font-medium border leading-relaxed <?= ($message_type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : ($message_type === 'warning' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-red-50 text-red-700 border-red-200')) ?>">
         <?= htmlspecialchars($message) ?>
       </div>
     <?php endif; ?>

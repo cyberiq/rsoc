@@ -41,6 +41,18 @@ $theme_classes = [
 
 $current_theme = $theme_classes[$user_type];
 
+function resolveUserTypeByEmail(PDO $pdo, string $email): ?string {
+    $table_map = ['customer' => 'customers', 'driver' => 'drivers', 'kia' => 'kias'];
+    foreach ($table_map as $type => $table) {
+        $stmt = $pdo->prepare("SELECT id FROM $table WHERE email = ? LIMIT 1");
+        $stmt->execute([$email]);
+        if ($stmt->fetch(PDO::FETCH_ASSOC)) {
+            return $type;
+        }
+    }
+    return null;
+}
+
 if (empty($token)) {
     $message = "❌ عذراً، لا يمكن الوصول لهذه الصفحة بدون رمز تحقق (Token) صالح.";
     $message_type = 'error';
@@ -58,6 +70,12 @@ if (empty($token)) {
                 $message = "❌ عذراً، انتهت الصلاحية الأمنية لهذا الرابط (صلاحية الرابط 1 ساعة فقط). يرجى طلب استعادة كلمة المرور مجدداً.";
                 $message_type = 'error';
             } else {
+                // إذا كان نوع الحساب المرسل في الرابط غير صحيح، نحاول تحديد النوع من البريد الإلكتروني المخزن
+                $resolved_type = resolveUserTypeByEmail($pdo, $reset_request['email']);
+                if ($resolved_type !== null) {
+                    $user_type = $resolved_type;
+                    $current_theme = $theme_classes[$user_type];
+                }
                 $is_valid_token = true;
             }
         } else {
@@ -85,9 +103,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_valid_token) {
         $message_type = 'error';
     } else {
         try {
-            // تحديد جدول قاعدة البيانات المطلوب بناءً على نوع المستخدم
-            $table = ($user_type === 'driver') ? 'drivers' : (($user_type === 'kia') ? 'kias' : 'customers');
+            // تحديد جدول قاعدة البيانات المطلوب بناءً على البريد الإلكتروني الفعلي من التوكن
             $email = $reset_request['email'];
+            $resolved_type = resolveUserTypeByEmail($pdo, $email);
+            $table = ($resolved_type === 'driver') ? 'drivers' : (($resolved_type === 'kia') ? 'kias' : 'customers');
 
             // تشفير كلمة المرور الجديدة بقوة
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);

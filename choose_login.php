@@ -2,6 +2,8 @@
 session_start();
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
+$flashMessage = $_SESSION['verify_success_msg'] ?? '';
+unset($_SESSION['verify_success_msg']);
 ?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" class="scroll-smooth">
@@ -80,6 +82,11 @@ error_reporting(E_ALL);
             </div>
 
             <div class="bg-slate-900/70 border border-slate-800 rounded-3xl p-8 space-y-6 text-right">
+                <?php if (!empty($flashMessage)): ?>
+                    <div class="mb-4 p-4 rounded-2xl bg-green-500/10 text-green-200 border border-green-500/20 text-sm">
+                        <?= htmlspecialchars($flashMessage) ?>
+                    </div>
+                <?php endif; ?>
                 <div class="space-y-3">
                     <h3 class="text-xl font-black text-white">الذهاب مباشرة إلى لوحة الدخول</h3>
                     <p class="text-sm text-slate-400 leading-relaxed">

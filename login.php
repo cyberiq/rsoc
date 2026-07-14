@@ -1,10 +1,4 @@
 <?php
-$sessionDir = __DIR__ . '/sessions';
-if (!is_dir($sessionDir)) {
-    mkdir($sessionDir, 0777, true);
-}
-
-ini_set('session.save_path', $sessionDir);
 ini_set('session.use_only_cookies', '1');
 ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_samesite', 'Lax');
@@ -109,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['user_type'] = $detected_user_type;
                     $_SESSION['user_email'] = $found_user['email'];
                     $_SESSION['user_name'] = $found_user['fullname'];
+                    $_SESSION['fullname'] = $found_user['fullname'];
                     $_SESSION['login_attempts'] = 0;
                     $_SESSION['login_last_attempt'] = 0;
 
