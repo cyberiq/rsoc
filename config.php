@@ -2,11 +2,7 @@
 
 require_once __DIR__ . '/env-loader.php';
 
-// --- 1. إعدادات الحماية الأساسية والترويسات ---
-header('X-Content-Type-Options: nosniff');
-header('X-Frame-Options: DENY');
-header('X-XSS-Protection: 1; mode=block');
-header('Referrer-Policy: strict-origin-when-cross-origin');
+// تم إزالة ترويسات header() لتجنب التعارض المسبب للخطأ 500 مع ملفات المشروع الأخرى
 
 date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'Asia/Baghdad');
 define('APP_DEBUG', (getenv('APP_DEBUG') === 'true'));
@@ -23,7 +19,6 @@ if (in_array($host, $directHosts, true)) {
 }
 
 // --- 3. تحديد مسار قاعدة البيانات المتوافق والآمن ---
-// نبحث أولاً في البيئة، ثم في المجلد الحالي عن الملفين الشائعين لضمان عدم حدوث خطأ
 $db_path = getenv('DB_PATH');
 
 if (empty($db_path)) {
@@ -32,7 +27,6 @@ if (empty($db_path)) {
     } elseif (file_exists(__DIR__ . '/kreen_rw.db')) {
         $db_path = __DIR__ . '/kreen_rw.db';
     } else {
-        // إذا لم تكن موجودة، نعتمد المسار القياسي الافتراضي ليتم إنشاؤها فيه
         $db_path = __DIR__ . '/kreen.db';
     }
 }
@@ -54,7 +48,6 @@ function sqliteColumnExists(PDO $pdo, string $table, string $column): bool {
 }
 
 function ensureKreenSchema(PDO $pdo): void {
-    // التأكد أولاً من وجود الجداول الأساسية لمنع خطأ no such table
     $pdo->exec("CREATE TABLE IF NOT EXISTS customers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         phone TEXT UNIQUE NOT NULL,
@@ -100,7 +93,6 @@ function ensureKreenSchema(PDO $pdo): void {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
 
-    // التحقق من الأعمدة الإضافية وإضافتها إن لم تكن موجودة
     $balanceTables = ['customers', 'drivers', 'kias'];
     foreach ($balanceTables as $table) {
         if (!sqliteColumnExists($pdo, $table, 'balance_iqd')) {
@@ -129,14 +121,13 @@ function ensureKreenSchema(PDO $pdo): void {
     )");
 }
 
-// --- 5. الاتصال الفعلي بقاعدة البيانات وتنشيط الحماية ---
+// --- 5. الاتصال الفعلي بقاعدة البيانات ---
 try {
     $pdo = new PDO("sqlite:$db_path");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $pdo->exec("PRAGMA foreign_keys = ON;");
     
-    // التأكد من تهيئة الجداول وحمايتها فوراً عند كل اتصال
     ensureKreenSchema($pdo);
 
 } catch (PDOException $e) {
