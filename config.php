@@ -1,5 +1,11 @@
 <?php
+// --- أسطر إظهار الأخطاء (أضفها هنا) ---
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
+require_once __DIR__ . '/env-loader.php';
+// ... باقي الكود كما هو دون أي تغيير
 require_once __DIR__ . '/env-loader.php';
 
 // تم إزالة ترويسات header() لتجنب التعارض المسبب للخطأ 500 مع ملفات المشروع الأخرى
