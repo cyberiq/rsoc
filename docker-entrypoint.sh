@@ -20,7 +20,15 @@ echo ""
 
 # قراءة متغيرات البيئة
 if [ -f /var/www/html/.env ]; then
-    export $(cat /var/www/html/.env | grep -v '^#' | xargs)
+    while IFS='=' read -r key value; do
+        if [ -z "$key" ]; then
+            continue
+        fi
+        case "$key" in
+            \#*) continue ;;
+        esac
+        export "$key=$value"
+    done < <(grep -v '^[[:space:]]*#' /var/www/html/.env | sed 's/\r$//')
     echo "✅ تم تحميل ملف .env"
 fi
 

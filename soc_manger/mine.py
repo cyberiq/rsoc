@@ -9,7 +9,7 @@ import threading
 from ipaddress import ip_address, ip_network
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
-from flask import Flask, request, abort, jsonify, Response
+from flask import Flask, request, abort, jsonify, Response, g
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -584,8 +584,10 @@ def proxy_to_upstream():
 
     try:
         # تحسين استقبال وإعادة تمرير ملفات الـ Multi-part والبيانات الثنائية بشكل متوافق تماماً مع Flask
-        # نستخدم cache=True حتى تبقى البيانات متاحة بعد قراءة request.form في الـ before_request
-        req_data = request.get_data(cache=True) if not request.files else None
+        # قمنا بقراءة الجسم الخام مسبقاً في before_request لتجنب فقدان بيانات POST عند المرور عبر الـ WAF
+        req_data = getattr(g, 'raw_body', None) if not request.files else None
+        if req_data is None and not request.files:
+            req_data = request.get_data(cache=True)
         req_files = {field: (f.filename, f.stream, f.mimetype) for field, f in request.files.items()} if request.files else None
 
         response = requests.request(
@@ -660,6 +662,9 @@ def waf_core():
         return
 
     client_ip = get_client_ip()
+
+    # قراءة الجسم الخام مبكراً لمنع فقدان البيانات عند تمرير الطلب
+    g.raw_body = request.get_data(cache=True)
     
     # إرسال بلاغ عند كل طلب
     send_request_alert(client_ip, request.path, request.method)
