@@ -171,7 +171,17 @@ define('SMTP_PORT', (int)(getenv('SMTP_PORT') ?: 587));
 define('SMTP_USER', getenv('SMTP_USER') ?: '');
 define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
 define('SMTP_SECURE', getenv('SMTP_SECURE') ?: 'tls');
-define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
+
+function is_valid_email(string $email): bool {
+    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+$default_from_email = 'noreply@localhost';
+$smtp_from_email = getenv('SMTP_FROM_EMAIL') ?: SMTP_USER;
+if (!is_valid_email($smtp_from_email)) {
+    $smtp_from_email = is_valid_email(SMTP_USER) ? SMTP_USER : $default_from_email;
+}
+define('SMTP_FROM_EMAIL', $smtp_from_email);
 define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: 'تطبيق كرين');
 define('SMTP_TIMEOUT', (int)(getenv('SMTP_TIMEOUT') ?: 10));
 define('SMTP_AUTO_TLS', getenv('SMTP_AUTO_TLS') !== 'false');
