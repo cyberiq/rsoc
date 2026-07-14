@@ -3,9 +3,14 @@ FROM php:8.2-cli
 WORKDIR /var/www/html
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends nginx python3 python3-venv python3-pip gcc libzip-dev unzip sqlite3 libsqlite3-dev \
+    && apt-get install -y --no-install-recommends nginx python3 python3-venv python3-pip gcc libzip-dev unzip sqlite3 libsqlite3-dev curl \
     && rm -rf /var/lib/apt/lists/* \
     && docker-php-ext-install pdo pdo_sqlite
+
+# تثبيت Composer
+RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
+    && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
+    && rm composer-setup.php
 
 # إعداد بيئة افتراضية للـ Python وتثبيت مكتبات WAF داخلها
 RUN python3 -m venv /opt/venv \
@@ -14,6 +19,9 @@ RUN python3 -m venv /opt/venv \
 
 # نسخ ملفات التطبيق وWAF
 COPY . /var/www/html/
+
+# تثبيت تبعيات PHP
+RUN composer install --no-dev --prefer-dist --optimize-autoloader
 
 RUN chmod +x /var/www/html/docker-entrypoint.sh
 

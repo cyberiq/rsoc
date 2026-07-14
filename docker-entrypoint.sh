@@ -32,6 +32,18 @@ if [ -f /var/www/html/.env ]; then
     echo "✅ تم تحميل ملف .env"
 fi
 
+if [ ! -f /var/www/html/vendor/autoload.php ]; then
+    echo "📦 تثبيت تبعيات PHP..."
+    if command -v composer >/dev/null 2>&1; then
+        composer install --no-dev --prefer-dist --optimize-autoloader
+    else
+        php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+        php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+        rm composer-setup.php
+        composer install --no-dev --prefer-dist --optimize-autoloader
+    fi
+fi
+
 # ============================================================================
 # 📂 الخطوة 1: إنشاء المجلدات والملفات الضرورية
 # ============================================================================
