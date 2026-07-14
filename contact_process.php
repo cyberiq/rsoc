@@ -4,7 +4,14 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 require 'config.php'; // لاستيراد إعدادات SMTP
-require 'vendor/autoload.php'; // تأكد من وجود مكتبة PHPMailer
+$autoloadPath = __DIR__ . '/vendor/autoload.php';
+if (file_exists($autoloadPath)) {
+    require $autoloadPath;
+} else {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => false, 'message' => '❌ الاعتمادات المطلوبة غير متوفرة. يرجى تشغيل composer install ثم إعادة المحاولة.']);
+    exit;
+}
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -30,8 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mail->SMTPSecure = SMTP_SECURE;
         $mail->Port       = SMTP_PORT;
         $mail->CharSet    = 'UTF-8';
+        $mail->Timeout    = SMTP_TIMEOUT;
+        $mail->SMTPKeepAlive = false;
+        $mail->SMTPAutoTLS = SMTP_AUTO_TLS;
 
-        $mail->setFrom(SMTP_USER, 'تطبيق كرين - اتصل بنا');
+        $mail->setFrom(SMTP_FROM_EMAIL, 'تطبيق كرين - اتصل بنا');
         $mail->addAddress('eceoeceo0@gmail.com'); // بريدك المعتمد
 
         $mail->isHTML(true);
@@ -51,50 +61,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-```
-
-### الخطوة 2: تحديث الجافاسكربت في `home.php`
-يجب أن تتأكد أن دالة الإرسال في أسفل ملف `home.php` ترسل البيانات فعلياً لهذا الملف. استبدل الدالة الموجودة في `home.php` بهذه الدالة:
-
-```javascript
-<script>
-function handleContactSubmit(event) {
-    event.preventDefault();
-
-    const formData = new FormData();
-    formData.append('name', document.getElementById('contactName').value);
-    formData.append('phone', document.getElementById('contactPhone').value);
-    formData.append('email', document.getElementById('contactEmail').value);
-    formData.append('message', document.getElementById('contactMessage').value);
-
-    fetch('contact_process.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        const successEl = document.getElementById('contactSuccess');
-        successEl.innerText = data.message;
-        successEl.classList.remove('hidden');
-        
-        if(data.success) {
-            document.getElementById('contactForm').reset();
-        }
-
-        setTimeout(() => {
-            successEl.classList.add('hidden');
-        }, 5000);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('حدث خطأ أثناء الإرسال');
-    });
-}
-</script>
-```
-
-### تأكد من الآتي:
-1.  **المكتبة:** تأكد أنك قمت بتنصيب `PHPMailer` (عن طريق `composer require phpmailer/phpmailer`) في مجلد مشروعك.
-2.  **كلمة المرور:** في ملف `config.php` (الذي قمنا بتحديثه سابقاً)، تأكد أن `SMTP_USER` هو `eceoeceo0@gmail.com` وأن `SMTP_PASS` هي **كلمة مرور التطبيقات** (16 حرفاً) التي أنشأتها من إعدادات حساب جوجل، وليست كلمة مرور الإيميل العادية.
-
-هل تم تنفيذ هذه الخطوات؟ سيعمل الإرسال بعدها فوراً!

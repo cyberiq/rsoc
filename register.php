@@ -15,6 +15,7 @@ use PHPMailer\PHPMailer\Exception;
 
 $message = '';
 $message_type = '';
+$debug_info = '';
 
 $selected_user_type = $_GET['user_type'] ?? 'customer';
 if (!in_array($selected_user_type, ['customer', 'driver', 'kia'], true)) {
@@ -88,16 +89,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mail->Password = SMTP_PASS;
                 $mail->SMTPSecure = SMTP_SECURE;
                 $mail->CharSet = 'UTF-8';
+                $mail->Timeout = SMTP_TIMEOUT;
+                $mail->SMTPKeepAlive = false;
+                $mail->SMTPAutoTLS = SMTP_AUTO_TLS;
                 $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
                 $mail->addAddress($email, $fullname);
                 $mail->Subject = 'رمز تفعيل حسابك في تطبيق كرين';
                 $mail->isHTML(true);
                 $mail->Body = '<h3>مرحبا ' . $fullname . '</h3><p>رمز التفعيل الخاص بك هو:</p><h1 style="font-size:32px; letter-spacing:4px;">' . $verification_code . '</h1><p>أو استخدم هذا الرابط:</p><p><a href="' . APP_URL . '/verify.php?email=' . urlencode($email) . '&user_type=' . $user_type . '">تفعيل الحساب الآن</a></p>';
                 $mail->send();
-
+ 
                 $_SESSION['verify_email'] = $email;
                 $_SESSION['verify_user_type'] = $user_type;
-
+ 
                 header('Location: verify.php');
                 exit;
             }
@@ -106,7 +110,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message_type = 'error';
         } catch (Exception $e) {
             $message = '❌ تعذر إرسال البريد الإلكتروني: ' . $e->getMessage();
-            $message_type = 'error';
+            $message_type = 'warning';
+            if (defined('APP_DEBUG') && APP_DEBUG === true) {
+                $debug_info = 'DEBUG: رمز التفعيل هو ' . $verification_code . '. يمكنك تفعيل الحساب يدوياً عبر الرابط: ' . APP_URL . '/verify.php?email=' . urlencode($email) . '&user_type=' . $user_type;
+            }
         }
     }
 }
@@ -198,6 +205,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="message <?= htmlspecialchars($message_type) ?>">
                 <?= htmlspecialchars($message) ?>
             </div>
+            <?php if (!empty($debug_info)): ?>
+                <div class="message success" style="background: rgba(56, 189, 248, 0.1); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.25); word-break: break-word;">
+                    <?= htmlspecialchars($debug_info) ?>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
 
         <form method="POST">

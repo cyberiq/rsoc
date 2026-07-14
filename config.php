@@ -7,7 +7,11 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/env-loader.php';
 
 date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'Asia/Baghdad');
-define('APP_DEBUG', (getenv('APP_DEBUG') === 'true'));
+define('APP_DEBUG', strtolower(getenv('APP_DEBUG') ?: 'false') === 'true');
+
+if (!extension_loaded('pdo_sqlite')) {
+    die("❌ يتطلب التطبيق امتداد PHP PDO SQLite. الرجاء تثبيت php-sqlite3 أو php8.4-sqlite3 أو تفعيل pdo_sqlite في إعدادات PHP الخاصة بالخادم.");
+}
 
 // --- 2. إعادة توجيه أي وصول مباشر إلى موقع kreen إلى WAF الخارجي ---
 $wafUrl = getenv('WAF_URL') ?: 'https://soc-waf.onrender.com';
@@ -162,13 +166,15 @@ try {
 }
 
 // --- 6. الإعدادات العامة والثوابت ---
-define('SMTP_HOST', 'smtp.gmail.com');
-define('SMTP_PORT', 587);
-define('SMTP_USER', 'techpluse7@gmail.com');
-define('SMTP_PASS', 'lgpliqnptkhxwzsw');
-define('SMTP_SECURE', 'tls');
-define('SMTP_FROM_EMAIL', SMTP_USER);
-define('SMTP_FROM_NAME', 'تطبيق كرين');
+define('SMTP_HOST', getenv('SMTP_HOST') ?: 'smtp.gmail.com');
+define('SMTP_PORT', (int)(getenv('SMTP_PORT') ?: 587));
+define('SMTP_USER', getenv('SMTP_USER') ?: '');
+define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
+define('SMTP_SECURE', getenv('SMTP_SECURE') ?: 'tls');
+define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
+define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: 'تطبيق كرين');
+define('SMTP_TIMEOUT', (int)(getenv('SMTP_TIMEOUT') ?: 10));
+define('SMTP_AUTO_TLS', getenv('SMTP_AUTO_TLS') !== 'false');
 $defaultAppUrl = 'http://localhost/kreen';
 if (isset($_SERVER['HTTP_HOST']) && !empty($_SERVER['HTTP_HOST'])) {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';

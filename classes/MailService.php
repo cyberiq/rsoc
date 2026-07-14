@@ -17,6 +17,9 @@ class MailService {
             $this->mailer->Password = getenv('SMTP_PASS') ?: '';
             $this->mailer->SMTPSecure = getenv('SMTP_SECURE') ?: 'tls';
             $this->mailer->CharSet = 'UTF-8';
+            $this->mailer->Timeout = (int)(getenv('SMTP_TIMEOUT') ?: 10);
+            $this->mailer->SMTPKeepAlive = false;
+            $this->mailer->SMTPAutoTLS = getenv('SMTP_AUTO_TLS') !== 'false';
         } catch (Exception $e) {
             error_log("MailService Error: " . $e->getMessage());
         }

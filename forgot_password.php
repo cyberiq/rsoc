@@ -18,6 +18,7 @@ use PHPMailer\PHPMailer\Exception;
 
 $message = '';
 $message_type = 'error';
+$debug_reset_link = '';
 
 $user_type = $_GET['user_type'] ?? 'customer';
 if (!in_array($user_type, ['kia', 'driver', 'customer'])) {
@@ -125,8 +126,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $mail->SMTPSecure = SMTP_SECURE;
                         $mail->Port       = SMTP_PORT;
                         $mail->CharSet    = 'UTF-8';
+                        $mail->Timeout    = SMTP_TIMEOUT;
+                        $mail->SMTPKeepAlive = false;
+                        $mail->SMTPAutoTLS = SMTP_AUTO_TLS;
  
-                        $mail->setFrom(SMTP_USER, 'نظام تطبيق كرين');
+                        $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
                         $mail->addAddress($email, $user['fullname']);
                         $mail->isHTML(true);
                         $mail->Subject = 'رابط إعادة تعيين كلمة المرور - تطبيق كرين';
@@ -157,12 +161,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } catch (Exception $e) {
                         $message = "⚠️ تم إنشاء رابط الاستعادة بنجاح، لكن حدثت مشكلة في إرسال البريد الإلكتروني: " . $e->getMessage();
                         $message_type = "warning";
-                        $debug_reset_link = $relative_reset_path;
+                        $debug_reset_link = rtrim(APP_URL, '/') . $relative_reset_path;
                     }
                 } else {
                     $message = "⚠️ تم إنشاء رابط الاستعادة بنجاح، ولكن مكتبة PHPMailer غير موجودة في الخادم لإرسال البريد.";
                     $message_type = "warning";
-                    $debug_reset_link = $relative_reset_path;
+                    $debug_reset_link = rtrim(APP_URL, '/') . $relative_reset_path;
                 }
  
                 $hostOnly = explode(':', $_SERVER['HTTP_HOST'] ?? '')[0];
@@ -215,6 +219,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="mb-5 p-4 rounded-xl text-sm font-medium border leading-relaxed <?= ($message_type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : ($message_type === 'warning' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-red-50 text-red-700 border-red-200')) ?>">
         <?= htmlspecialchars($message) ?>
       </div>
+      <?php if (!empty($debug_reset_link) && defined('APP_DEBUG') && APP_DEBUG === true): ?>
+          <div class="mb-5 p-4 rounded-xl text-sm font-medium border bg-sky-50 text-sky-700 border-sky-200 leading-relaxed break-words">
+              DEBUG reset path: <?= htmlspecialchars($debug_reset_link) ?>
+          </div>
+      <?php endif; ?>
     <?php endif; ?>
 
     <!-- نموذج المراسلة والتأمين -->
